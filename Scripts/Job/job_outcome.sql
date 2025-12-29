@@ -27,3 +27,4 @@ INNER JOIN msdb.dbo.sysjobs j
 WHERE h.job_id = 'FD37EF32-01B4-48A6-B75B-B6500B416820'
   AND h.step_id = 0   -- overall job result
 ORDER BY h.run_date DESC, h.run_time DESC;
+	
