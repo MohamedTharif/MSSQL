@@ -1,0 +1,24 @@
+As checked for the data compression for the databases,ROW Compression will not reclaim the more than 10% size recution and PAGE compression will reclaim more than 25-30% of unused space.
+
+But please note that,it will increase the unused space in data file not reduce physixal file size,if we have to reduce the physical file size we have to perfrom data file shirnking.which is not recommended due to Page compression will increase the CPU workload as well as Data file shrinking increases the fragmentation requires index rebuild.
+
+
+Sivaramn said
+Any compression technique will require additional cpu for compress and uncompress. We can shrink the datafile with truncateonly option if available free space in file greater than 15% it will not cause fragmentation.
+ 
+We can suggest both options. They have to test the impact on the staging or uat database.
+If the CPU usage is already a bottleneck we can't suggest compression else We can recommend archival. 
+
+Storage saving and impact on the large tables needs to be tested 
+ 
+For archived data table page compression we can proceed. If the usage of the table is low.
+ 
+
+When memory and IOPS is highly utilised and normal CPU usage then compression gives advantage in that situation
+
+
+
+https://www.sqlshack.com/use-sql-server-data-compression-save-space/
+
+
+mail id: #1302107 || Data compression or Performance tuning for for databases.

@@ -1,0 +1,13 @@
+CREATE TABLE dbo.ValidIPAddress
+(
+    IPAddress NVARCHAR(50) PRIMARY KEY
+);
+
+
+INSERT INTO dbo.ValidIPAddress (IPAddress)
+VALUES
+('172.31.5.171'),
+('13.234.211.64'),
+('172.31.45.251'),
+('13.203.183.57'),
+('23.226.124.197');
