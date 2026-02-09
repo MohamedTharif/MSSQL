@@ -1,23 +1,37 @@
-
-DECLARE @CurrentHour INT = DATEPART(HOUR, GETDATE());
 DECLARE @CurrentFileSizeMB BIGINT;
-DECLARE @FileName SYSNAME = 'vasdev_sel_log';  -- Logical file name
-DECLARE @DBName SYSNAME = 'vasdev_sel';        -- Database name
+DECLARE @FileName SYSNAME = 'vasdev_sel_log';   -- Logical log file name
+DECLARE @DBName SYSNAME = 'vasdev_sel';         -- Database name
+DECLARE @LogReuseWaitDesc SYSNAME;
 
--- Condition: Between 9 PM and 10 PM
-IF @CurrentHour >= 21 AND @CurrentHour < 22
+------------------------------------------------------------
+-- Get log file size
+------------------------------------------------------------
+SELECT @CurrentFileSizeMB = size * 8 / 1024
+FROM sys.master_files
+WHERE database_id = DB_ID(@DBName)
+  AND name = @FileName;
+
+------------------------------------------------------------
+-- Get log_reuse_wait_desc
+------------------------------------------------------------
+SELECT @LogReuseWaitDesc = log_reuse_wait_desc
+FROM sys.databases
+WHERE name = @DBName;
+
+------------------------------------------------------------
+-- condition
+------------------------------------------------------------
+IF @CurrentFileSizeMB > 10240        -- 10 GB
+   AND @LogReuseWaitDesc = 'NOTHING'
 BEGIN
-    SELECT @CurrentFileSizeMB = size * 8 / 1024
-    FROM sys.master_files
-    WHERE database_id = DB_ID(@DBName)
-      AND name = @FileName;
-
-    -- Condition: File size > 35 GB (35840 MB)
-    IF @CurrentFileSizeMB > 35840
-    BEGIN
-        EXEC('USE [' + @DBName + ']; DBCC SHRINKFILE (N''' + @FileName + ''', 1024);');
-    END
+    EXEC (
+        'USE [' + @DBName + '];
+         DBCC SHRINKFILE (N''' + @FileName + ''', 1024);'
+    );
 END
-
-
-modify this for the two databases and time between 1.30 AM to 2:00AM
+ELSE
+BEGIN
+    PRINT 'Shrink skipped';
+    PRINT 'Log Size (MB): ' + CAST(@CurrentFileSizeMB AS VARCHAR(20));
+    PRINT 'log_reuse_wait_desc: ' + ISNULL(@LogReuseWaitDesc, 'UNKNOWN');
+END;
