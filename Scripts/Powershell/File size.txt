@@ -1,0 +1,13 @@
+$folderPath = "C:\Users\Mohamed.Tharif B\Documents\Test\MSSQL"  # Replace with your folder path
+
+# Get the list of files in the folder, including subfolders, and sort by size
+$largestFile = Get-ChildItem -Path $folderPath -File -Recurse | 
+    Sort-Object Length -Descending | 
+    Select-Object -First 1
+
+# Display the result
+Write-Host "The largest file is:"
+Write-Host "File: $($largestFile.FullName)"
+Write-Host "Size: $([math]::round($largestFile.Length / 1MB, 2)) MB"
+The largest file is:
+File: C:\Users\Mohamed.Tharif B\Documents\Test\MSSQL\.git\objects\0b\tmp_obj_DkN2Ok

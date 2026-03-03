@@ -12,12 +12,12 @@ DECLARE @ThresholdMB INT = 1500;
 DECLARE @Databases TABLE (DBName SYSNAME, LogFile SYSNAME);
 
 INSERT INTO @Databases (DBName, LogFile)
-VALUES ('DBLoanguard', 'DBLoanguard_log'),
+VALUES ('', 'DBLoanguard_log'),
        ('DBLoanguardHistory', 'DBLoanguardHistory_log');
 
 -- time window check: only between 05:30 and 05:59 AM
 IF (@CurrentHour = 5 AND @CurrentMinute >= 30 AND @CurrentMinute < 60)
-BEGIN
+	BEGIN
     DECLARE db_cursor CURSOR FAST_FORWARD FOR
         SELECT DBName, LogFile FROM @Databases;
 
@@ -64,7 +64,4 @@ BEGIN
     CLOSE db_cursor;
     DEALLOCATE db_cursor;
 END
-ELSE
-BEGIN
-    PRINT 'Outside maintenance window (5:30 AM – 6:00 AM). Script skipped.';
-END;
+;

@@ -1,3 +1,0 @@
-dbcc shrinkfile()
-dbcc sqlperf(logspace)
-

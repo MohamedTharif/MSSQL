@@ -22,3 +22,37 @@ SELECT TOP (1000) *
 FROM FirstSPID
 WHERE rn = 1
 ORDER BY StartTime DESC;
+
+
+------------------------------------------
+WITH FirstSPID AS (
+    SELECT 
+        InstanceName,
+        StartTime,
+        ElapsedTime,
+        SPID,
+        UserName,
+        ProgramName,
+        DatabaseName,
+        StatementText,
+        StoredProcedure,
+        logdate,
+        ROW_NUMBER() OVER (
+            PARTITION BY SPID, CAST(StartTime AS date)
+            ORDER BY StartTime ASC
+        ) AS rn
+    FROM [DBADB].[dbo].[longqrydetails]
+)
+SELECT
+    InstanceName,
+    StartTime,
+    SPID,
+    ElapsedTime,
+    UserName,
+    ProgramName,
+    DatabaseName,
+    StatementText,
+    StoredProcedure
+FROM FirstSPID
+WHERE rn = 1 and StoredProcedure<>'Query'
+ORDER BY StartTime DESC;

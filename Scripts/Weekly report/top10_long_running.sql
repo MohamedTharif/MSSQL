@@ -10,9 +10,9 @@ WITH LastWeekData AS (
         UserName,
         logdate
     FROM [DBADB].[dbo].[longqrydetails]
-    WHERE logdate >= DATEADD(DAY, -7, GETDATE())
-      AND is_closed = 0                          -- optional
-      AND ProgramName NOT LIKE '%SQLAgent%'     -- exclude SQL Agent jobs
+    WHERE logdate >= >= '02-09-2026' and logdate<='08-09-2026' --change here
+      AND is_closed = 0                          
+    --  AND ProgramName NOT LIKE '%SQLAgent%'     
 ),
 Deduplicated AS (
     SELECT

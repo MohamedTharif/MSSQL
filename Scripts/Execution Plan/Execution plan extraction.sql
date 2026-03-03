@@ -34,3 +34,13 @@ FROM sys.query_store_plan qsp
 JOIN sys.query_store_query qsq
     ON qsp.query_id = qsq.query_id
 WHERE qsq.query_id =52767984;
+
+Store procedure
+--  SELECT
+--    qs.execution_count,
+--    qs.total_elapsed_time / qs.execution_count AS avg_elapsed_time,
+--    qp.query_plan
+--FROM sys.dm_exec_procedure_stats qs
+--CROSS APPLY sys.dm_exec_query_plan(qs.plan_handle) qp
+--WHERE OBJECT_NAME(qs.object_id, qs.database_id)
+--      = 'Spcreate_ClientDPAccountCodes_For_FundsGenie';
