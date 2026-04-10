@@ -1,0 +1,182 @@
+USE [DBADB]
+GO
+/****** Object:  StoredProcedure [dbo].[usp_Send_PepperAdvantage_DB_Schema_JSON]    Script Date: 10-04-2026 10:29:37 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[usp_Send_PepperAdvantage_DB_Schema_JSON]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @ServerName NVARCHAR(200) = @@SERVERNAME;
+    DECLARE @DBName NVARCHAR(200);
+    DECLARE @Subject NVARCHAR(500);
+    DECLARE @JSON NVARCHAR(MAX);
+    DECLARE @SQL NVARCHAR(MAX);
+
+    DECLARE db_cursor CURSOR FOR
+    SELECT DBName
+    FROM (
+        VALUES
+            ('DBLgLens'),
+            ('DBLoanguard'),
+            ('DBLoanguardHistory')
+    ) AS DBList(DBName);
+
+    OPEN db_cursor;
+    FETCH NEXT FROM db_cursor INTO @DBName;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+
+        ------------------------------------------------------------
+        -- 1. TABLES + COLUMNS
+        ------------------------------------------------------------
+        SET @Subject = 'Pepper Advantage | ' + @ServerName + ' | ' + @DBName + ' | Tables & Columns';
+
+        SET @SQL = '
+        SELECT @JSON_OUT = (
+            SELECT
+                s.name AS schema_name,
+                t.name AS table_name,
+                c.name AS column_name,
+                ty.name AS data_type,
+                c.is_nullable
+            FROM ' + QUOTENAME(@DBName) + '.sys.tables t
+            JOIN ' + QUOTENAME(@DBName) + '.sys.schemas s ON t.schema_id = s.schema_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.columns c ON t.object_id = c.object_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.types ty ON c.user_type_id = ty.user_type_id
+            WHERE s.name NOT IN (''cdc'',''sys'',''INFORMATION_SCHEMA'')
+            ORDER BY s.name, t.name, c.column_id
+            FOR JSON PATH, ROOT(''TablesColumns'')
+        )';
+
+        EXEC sp_executesql @SQL, N'@JSON_OUT NVARCHAR(MAX) OUTPUT', @JSON OUTPUT;
+
+        EXEC msdb.dbo.sp_send_dbmail
+            @profile_name = 'DBA',
+            @recipients = 'dccagent@geopits.com',
+            @subject = @Subject,
+            @body = @JSON,
+            @body_format = 'TEXT';
+
+        ------------------------------------------------------------
+        -- 2. PRIMARY KEYS
+        ------------------------------------------------------------
+        SET @Subject = 'Pepper Advantage | ' + @ServerName + ' | ' + @DBName + ' | Primary Keys';
+
+        SET @SQL = '
+        SELECT @JSON_OUT = (
+            SELECT
+                s.name AS schema_name,
+                t.name AS table_name,
+                c.name AS column_name
+            FROM ' + QUOTENAME(@DBName) + '.sys.key_constraints kc
+            JOIN ' + QUOTENAME(@DBName) + '.sys.tables t ON kc.parent_object_id = t.object_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.schemas s ON t.schema_id = s.schema_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.index_columns ic
+                ON kc.parent_object_id = ic.object_id
+                AND kc.unique_index_id = ic.index_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.columns c
+                ON ic.object_id = c.object_id
+                AND ic.column_id = c.column_id
+            WHERE kc.type = ''PK''
+            FOR JSON PATH, ROOT(''PrimaryKeys'')
+        )';
+
+        EXEC sp_executesql @SQL, N'@JSON_OUT NVARCHAR(MAX) OUTPUT', @JSON OUTPUT;
+
+        EXEC msdb.dbo.sp_send_dbmail
+            @profile_name = 'DBA',
+            @recipients = 'dccagent@geopits.com',
+            @subject = @Subject,
+            @body = @JSON,
+            @body_format = 'TEXT';
+
+        ------------------------------------------------------------
+        -- 3. FOREIGN KEYS
+        ------------------------------------------------------------
+        SET @Subject = 'Pepper Advantage | ' + @ServerName + ' | ' + @DBName + ' | Foreign Keys';
+
+        SET @SQL = '
+        SELECT @JSON_OUT = (
+            SELECT
+                fk.name AS foreign_key_name,
+                sp.name AS schema_name,
+                tp.name AS parent_table,
+                cp.name AS parent_column,
+                tr.name AS referenced_table,
+                cr.name AS referenced_column
+            FROM ' + QUOTENAME(@DBName) + '.sys.foreign_keys fk
+            JOIN ' + QUOTENAME(@DBName) + '.sys.foreign_key_columns fkc
+                ON fk.object_id = fkc.constraint_object_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.tables tp
+                ON fkc.parent_object_id = tp.object_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.schemas sp
+                ON tp.schema_id = sp.schema_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.columns cp
+                ON fkc.parent_object_id = cp.object_id
+                AND fkc.parent_column_id = cp.column_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.tables tr
+                ON fkc.referenced_object_id = tr.object_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.columns cr
+                ON fkc.referenced_object_id = cr.object_id
+                AND fkc.referenced_column_id = cr.column_id
+            FOR JSON PATH, ROOT(''ForeignKeys'')
+        )';
+
+        EXEC sp_executesql @SQL, N'@JSON_OUT NVARCHAR(MAX) OUTPUT', @JSON OUTPUT;
+
+        EXEC msdb.dbo.sp_send_dbmail
+            @profile_name = 'DBA',
+            @recipients = 'dccagent@geopits.com',
+            @subject = @Subject,
+            @body = @JSON,
+            @body_format = 'TEXT';
+
+        ------------------------------------------------------------
+        -- 4. INDEXES
+        ------------------------------------------------------------
+        SET @Subject = 'Pepper Advantage | ' + @ServerName + ' | ' + @DBName + ' | Indexes';
+
+        SET @SQL = '
+        SELECT @JSON_OUT = (
+            SELECT
+                s.name AS schema_name,
+                t.name AS table_name,
+                i.name AS index_name,
+                i.type_desc,
+                c.name AS column_name
+            FROM ' + QUOTENAME(@DBName) + '.sys.indexes i
+            JOIN ' + QUOTENAME(@DBName) + '.sys.tables t
+                ON i.object_id = t.object_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.schemas s
+                ON t.schema_id = s.schema_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.index_columns ic
+                ON i.object_id = ic.object_id
+                AND i.index_id = ic.index_id
+            JOIN ' + QUOTENAME(@DBName) + '.sys.columns c
+                ON ic.object_id = c.object_id
+                AND ic.column_id = c.column_id
+            WHERE i.is_primary_key = 0
+            FOR JSON PATH, ROOT(''Indexes'')
+        )';
+
+        EXEC sp_executesql @SQL, N'@JSON_OUT NVARCHAR(MAX) OUTPUT', @JSON OUTPUT;
+
+        EXEC msdb.dbo.sp_send_dbmail
+            @profile_name = 'DBA',
+            @recipients = 'dccagent@geopits.com',
+            @subject = @Subject,
+            @body = @JSON,
+            @body_format = 'TEXT';
+
+        FETCH NEXT FROM db_cursor INTO @DBName;
+    END
+
+    CLOSE db_cursor;
+    DEALLOCATE db_cursor;
+END;
